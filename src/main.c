@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../include/city_manager.h"
 
 // ----- helper method to print usage -----
 void printUsage(const char *program_name) {
@@ -39,6 +40,7 @@ int main(int argc, char *argv[]) {
             user = argv[++i];
         } else if (strcmp(argv[i], "--add") == 0 && i + 1 < argc) {
             command = "add";
+            district_id = argv[++i];
         } else if (strcmp(argv[i], "--list") == 0 && i + 1 < argc) {
             command = "list";
             district_id = argv[++i];
@@ -53,7 +55,7 @@ int main(int argc, char *argv[]) {
         } else if (strcmp(argv[i], "--update_threshold") == 0 && i + 2 < argc) {
             command = "update_threshold";
             district_id = argv[++i];
-            report_id = atoi(argv[++i]);
+            threshold = atoi(argv[++i]);
         } else if (strcmp(argv[i], "--filter") == 0 && i + 2 < argc) {
             command = "filter";
             district_id = argv[++i];
@@ -74,34 +76,38 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    // ----- system calls -----
-    // TODO: create the district folder and files if they don't exist
-    // initialize_district(district_id);
-
-    // TODO: write to logged_district
-    // log_action(district_id, role, user, command);
+    initialize_district(district_id);
+    update_active_reports_symlink(district_id);
 
     // ----- command routing -----
     if (strcmp(command, "add") == 0) {
-        printf("[COMMAND]: Adding...\n");
-        // add_report();
+        if (!add_report(district_id, role, user)) {
+            return EXIT_FAILURE;
+        }
     } else if (strcmp(command, "list") == 0) {
-        printf("[COMMAND]: Listing reports...\n");
-        // list_repots();
+        if (!list_reports(district_id, role)) {
+            return EXIT_FAILURE;
+        }
     } else if (strcmp(command, "view") == 0) {
-        printf("[COMMAND]: Viewing report...\n");
-        // view_report();
+        if (!view_report(district_id, role, report_id)) {
+            return EXIT_FAILURE;
+        }
     } else if (strcmp(command, "remove_report") == 0) {
-        printf("[COMMAND]: Removing report...\n");
-        // remove_report();
+        if (!remove_report_by_id(district_id, role, report_id)) {
+            return EXIT_FAILURE;
+        }
     } else if (strcmp(command, "update_threshold") == 0) {
-        printf("[COMMAND]: Updating threshold...\n");
-        // update_threshold();
+        if (!update_district_threshold(district_id, role, threshold)) {
+            return EXIT_FAILURE;
+        }
     } else if (strcmp(command, "filter") == 0) {
-        printf("[COMMAND]: Filtering...\n");
-        // filter();
+        execute_filter(district_id, role, argc, argv, filter_start_index);
     } else {
         perror("[ERROR]: Unknown command sequence!");
+        return EXIT_FAILURE;
+    }
+
+    if (!log_action(district_id, role, user, command)) {
         return EXIT_FAILURE;
     }
 
