@@ -2,6 +2,7 @@
 #define CITY_MANAGER_H
 
 #include <time.h>
+#include <sys/types.h>
 
 #define MAX_STR_LEN 64
 #define DESC_LEN 256
@@ -30,5 +31,11 @@ void execute_filter(const char *district_id, const char *role, int argc, char *a
 void initialize_district(const char *district_id);
 int check_access(const char *filepath, const char *role, int action);
 void mode_to_string(mode_t mode, char *str);
+
+int validate_exact_permissions(const char *filepath, mode_t expected_mode);
+void update_active_reports_symlink(const char *district_id);
+void scan_district_entries(const char *district_id);
+void scan_active_report_links(void);
+int log_action(const char *district_id, const char *role, const char *user, const char *command);
 
 #endif
