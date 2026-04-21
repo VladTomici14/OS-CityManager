@@ -38,4 +38,10 @@ void scan_district_entries(const char *district_id);
 void scan_active_report_links(void);
 int log_action(const char *district_id, const char *role, const char *user, const char *command);
 
+int add_report(const char *district_id, const char *role, const char *user);
+int list_reports(const char *district_id, const char *role);
+int view_report(const char *district_id, const char *role, int report_id);
+int remove_report_by_id(const char *district_id, const char *role, int report_id);
+int update_district_threshold(const char *district_id, const char *role, int threshold);
+
 #endif
