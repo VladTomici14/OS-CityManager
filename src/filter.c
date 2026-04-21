@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include "../include/city_manager.h"
 
 int parse_condition(const char *input, char *field, char *op, char *value) {
@@ -55,5 +57,45 @@ int match_condition(Report *r, const char *field, const char *op, const char *va
 }
 
 void execute_filter(const char *district_id, const char *role, int argc, char *argv[], int start_idx) {
+    char reports_path[256];
+    snprintf(reports_path, sizeof(reports_path), "%s/reports.dat", district_id);
 
+    if (!check_access(reports_path, role, WANT_READ)) {
+        return;
+    }
+
+    int fd = open(reports_path, O_RDONLY);
+    if (fd < 0) {
+        perror("[ERROR] open reports.dat");
+        return;
+    }
+
+    Report r;
+    while (read(fd, &r, sizeof(r)) == (ssize_t)sizeof(r)) {
+        int all_match = 1;
+
+        for (int i = start_idx; i < argc; i++) {
+            char field[MAX_STR_LEN] = {0};
+            char op[3] = {0};
+            char value[MAX_STR_LEN] = {0};
+
+            if (!parse_condition(argv[i], field, op, value)) {
+                fprintf(stderr, "[ERROR] Invalid condition format: %s\n", argv[i]);
+                all_match = 0;
+                break;
+            }
+
+            if (!match_condition(&r, field, op, value)) {
+                all_match = 0;
+                break;
+            }
+        }
+
+        if (all_match) {
+            printf("ID: %d | inspector: %s | category: %s | severity: %d | timestamp: %ld\n",
+                   r.report_id, r.inspector_name, r.category, r.severity, (long)r.timestamp);
+        }
+    }
+
+    close(fd);
 }
