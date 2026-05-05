@@ -5,6 +5,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
+#include <signal.h>
 #include "../include/city_manager.h"
 
 static void make_path(char *out, size_t out_sz, const char *district_id, const char *name) {
@@ -88,6 +90,41 @@ int add_report(const char *district_id, const char *role, const char *user) {
     close(fd);
     chmod(reports_path, 0664);
     printf("[OK] Report %d added.\n", r.report_id);
+
+    // Notify monitor
+    int monitor_fd = open(".monitor_pid", O_RDONLY);
+    int monitor_notified = 0;
+    if (monitor_fd >= 0) {
+        char pid_buf[32];
+        ssize_t n = read(monitor_fd, pid_buf, sizeof(pid_buf) - 1);
+        close(monitor_fd);
+        if (n > 0) {
+            pid_buf[n] = '\0';
+            pid_t monitor_pid = atoi(pid_buf);
+            if (monitor_pid > 0 && kill(monitor_pid, SIGUSR1) == 0) {
+                monitor_notified = 1;
+            }
+        }
+    }
+
+    // Log the notification
+    char logpath[256];
+    snprintf(logpath, sizeof(logpath), "%s/logged_district", district_id);
+
+    if (strcmp(role, "manager") == 0 && check_access(logpath, role, WANT_WRITE)) {
+        int log_fd = open(logpath, O_WRONLY | O_APPEND);
+        if (log_fd >= 0) {
+            char log_msg[512];
+            time_t now = time(NULL);
+            if (monitor_notified) {
+                snprintf(log_msg, sizeof(log_msg), "%ld role=%s user=%s event=Monitor notified of new report %d\n", (long)now, role, user, r.report_id);
+            } else {
+                snprintf(log_msg, sizeof(log_msg), "%ld role=%s user=%s event=Monitor could not be informed of the event for report %d\n", (long)now, role, user, r.report_id);
+            }
+            write(log_fd, log_msg, strlen(log_msg));
+            close(log_fd);
+        }
+    }
 
     return 1;
 }
@@ -275,4 +312,39 @@ int update_district_threshold(const char *district_id, const char *role, int thr
     close(fd);
     printf("[OK] Threshold set to %d\n", threshold);
     return 1;
+}
+
+int remove_district(const char *district_id, const char *role) {
+    if (strcmp(role, "manager") != 0) {
+        fprintf(stderr, "[ERROR] remove_district is manager-only\n");
+        return 0;
+    }
+
+    char linkname[256];
+    snprintf(linkname, sizeof(linkname), "active_reports-%s", district_id);
+    unlink(linkname);
+
+    pid_t pid = fork();
+    if (pid < 0) {
+        perror("[ERROR] fork");
+        return 0;
+    } else if (pid == 0) {
+        // Child process
+        char dir_path[256];
+        snprintf(dir_path, sizeof(dir_path), "%s", district_id);
+        execl("/bin/rm", "rm", "-rf", dir_path, (char *)NULL);
+        perror("[ERROR] execl");
+        exit(1);
+    } else {
+        // Parent process
+        int status;
+        waitpid(pid, &status, 0);
+        if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+            printf("[OK] District %s removed\n", district_id);
+            return 1;
+        } else {
+            fprintf(stderr, "[ERROR] Failed to remove district %s\n", district_id);
+            return 0;
+        }
+    }
 }
