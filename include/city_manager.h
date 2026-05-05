@@ -43,5 +43,6 @@ int list_reports(const char *district_id, const char *role);
 int view_report(const char *district_id, const char *role, int report_id);
 int remove_report_by_id(const char *district_id, const char *role, int report_id);
 int update_district_threshold(const char *district_id, const char *role, int threshold);
+int remove_district(const char *district_id, const char *role);
 
 #endif
