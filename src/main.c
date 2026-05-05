@@ -13,6 +13,7 @@ void printUsage(const char *program_name) {
     printf("  --remove_report <district_id> <report_id>\n");
     printf("  --update_threshold <district_id> <value>\n");
     printf("  --filter <district_id> <condition> [condition2...]\n");
+    printf("  --remove_district <district_id>\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -61,6 +62,9 @@ int main(int argc, char *argv[]) {
             district_id = argv[++i];
             filter_start_index = i + 1;
             break;
+        } else if (strcmp(argv[i], "--remove_district") == 0 && i + 1 < argc) {
+            command = "remove_district";
+            district_id = argv[++i];
         }
     }
 
@@ -76,8 +80,10 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    initialize_district(district_id);
-    update_active_reports_symlink(district_id);
+    if (strcmp(command, "remove_district") != 0) {
+        initialize_district(district_id);
+        update_active_reports_symlink(district_id);
+    }
 
     // ----- command routing -----
     if (strcmp(command, "add") == 0) {
@@ -102,13 +108,19 @@ int main(int argc, char *argv[]) {
         }
     } else if (strcmp(command, "filter") == 0) {
         execute_filter(district_id, role, argc, argv, filter_start_index);
+    } else if (strcmp(command, "remove_district") == 0) {
+        if (!remove_district(district_id, role)) {
+            return EXIT_FAILURE;
+        }
     } else {
         perror("[ERROR]: Unknown command sequence!");
         return EXIT_FAILURE;
     }
 
-    if (!log_action(district_id, role, user, command)) {
-        return EXIT_FAILURE;
+    if (strcmp(command, "remove_district") != 0) {
+        if (!log_action(district_id, role, user, command)) {
+            return EXIT_FAILURE;
+        }
     }
 
     return EXIT_SUCCESS;
