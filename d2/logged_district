@@ -1,0 +1,4 @@
+1778437728 role=manager user=Bob event=Monitor notified of new report 1
+1778437728 role=manager user=Bob command=add
+1778437755 role=manager user=Bob event=Monitor notified of new report 2
+1778437755 role=manager user=Bob command=add
