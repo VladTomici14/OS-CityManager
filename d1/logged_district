@@ -1,1 +1,7 @@
 1777273906 role=manager user=alice command=list
+1778437626 role=manager user=Alice event=Monitor notified of new report 1
+1778437626 role=manager user=Alice command=add
+1778437673 role=manager user=Alice event=Monitor notified of new report 2
+1778437673 role=manager user=Alice command=add
+1778437698 role=manager user=Alice event=Monitor notified of new report 3
+1778437698 role=manager user=Alice command=add
